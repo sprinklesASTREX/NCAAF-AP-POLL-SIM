@@ -8,7 +8,7 @@ roster=json.loads(subprocess.check_output(['node','--input-type=module','-e',"im
 r=get('rankings');ap=next(x for x in r['rankings'] if x['type']=='ap');year=ap['season']['year'];week=ap['occurrence']['number']
 def load(team):
     tid=team['espn'];detail=get(f'teams/{tid}?season={year}')['team'];stats=get(f'teams/{tid}/statistics?season={year}&seasontype=2');historical=get(f'teams/{tid}/schedule?season={year-1}');schedule=get(f'teams/{tid}/schedule?season={year}&seasontype=2')
-    if historical.get('season',{}).get('year')!=year-1:raise ValueError('Wrong historical season: '+team['id'])
+    if historical.get('requestedSeason',{}).get('year')!=year-1 or any(e.get('season',{}).get('year')!=year-1 for e in historical.get('events',[])):raise ValueError('Wrong historical season: '+team['id'])
     if str(detail['id'])!=tid or stats.get('season',{}).get('year')!=year:raise ValueError(f'Wrong season/team: {team["id"]}')
     rec=next((x for x in detail.get('record',{}).get('items',[]) if x.get('type')=='total'),{})
     fields={x['name']:x.get('value') for x in rec.get('stats',[]) if x.get('value') is not None}
