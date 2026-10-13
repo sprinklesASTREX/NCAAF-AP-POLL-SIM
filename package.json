@@ -1,1 +1,16 @@
-{"name":"saturday-poll","version":"1.0.0","private":true,"type":"module","scripts":{"dev":"vite --host 0.0.0.0","build":"vite build","preview":"vite preview --host 0.0.0.0","test":"node --test"},"devDependencies":{"vite":"^7.1.0"}}
+{
+  "name": "saturday-poll",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build && node scripts/finalize-build.js",
+    "preview": "vite preview --host 0.0.0.0",
+    "test": "node --test",
+    "prepare-pages": "npm run build && node scripts/prepare-pages.js"
+  },
+  "devDependencies": {
+    "vite": "^7.1.0"
+  }
+}

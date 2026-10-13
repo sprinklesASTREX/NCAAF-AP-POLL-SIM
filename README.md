@@ -22,3 +22,9 @@ Defaults to a Week 7 sandbox using the 2025 preseason Top 25 order as a referenc
 63 deterministic voter ballots distribute 25–1 points; maximum 1,575 points per team. Small voter preferences can change the seed order. Ratings adjust for expected outcomes, opponent strength, home advantage, capped margins (28 points), and historically weak opponents. Historical strength is a heuristic, not a trained model or verified current statistics. Random weekly matchups are fictional, not the official schedule. A team may play once per week; idle teams retain ratings.
 
 Team logos load from ESPN's CDN (`a.espncdn.com`); initials appear when blocked or unavailable. Fonts use Google Fonts with system fallbacks. No credentials or backend required. Season data is stored only in this browser. Resetting or clearing browser storage removes it.
+
+## GitHub Pages
+
+Live site: https://sprinklesastrex.github.io/NCAAF-AP-POLL-SIM/
+
+Pages publishes the compiled `index.html` and `assets/` from `main` at the repository root. The development HTML entry is `app.html`; open `/app.html` on the development server. Before publishing a source change, run `npm test` and `npm run prepare-pages`, then commit and push the regenerated `index.html` and `assets/` with the source. GitHub's existing Pages workflow publishes the site; the Check simulator workflow validates the source. Keeping the generated files in the repository avoids needing access to change Pages publishing settings.
