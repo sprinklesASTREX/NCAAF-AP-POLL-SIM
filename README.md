@@ -2,7 +2,7 @@
 
 Live: https://sprinklesastrex.github.io/NCAAF-AP-POLL-SIM/
 
-138 teams, a Top 25, first-place votes, others receiving votes, recently dropped teams, real starting records, manual results, fictional weekly slates, and browser-saved seasons.
+138 teams, a Top 25, first-place votes, others receiving votes, dropped teams, manual scores, fictional weekly slates, and browser-saved seasons.
 
 ## Run and validate
 
@@ -13,33 +13,43 @@ npm ci --cache /tmp/ncaaf-npm
 npm run dev
 ```
 
-Open `/app.html` on the development server. `npm test` checks model behavior and exact ESPN snapshot preservation. `npm run build` builds the production app.
+Open `/app.html` on the development server. `npm test` checks rankings, blowout penalties, voting points, and weekly accounting. `npm run build` builds the production app.
 
-## ESPN snapshot
+## Starting poll: 2026 preseason
 
-The checked-in snapshot is the **2026 Week 7 AP poll** returned by ESPN, published October 11, 2026 and fetched October 13, 2026. It includes ESPN's exact Top 25 points, first-place votes, others receiving votes, and dropped teams. All 138 teams have season wins/losses, points scored/allowed per game, passing/rushing yards per game, 2025 regular-season records, and completed-opponent win percentages. This is a dated snapshot, not an automatically updating feed. Links to ESPN rankings and team statistics are in the app.
+The starting rankings and voting points come from ESPN's archived **2026 preseason AP poll**, dated August 17, 2026. Ohio State, Oregon, and Georgia lead the field. The source's tie at No. 14 and all 25 other teams receiving votes are preserved exactly. Every team starts at 0–0. Team strength and scoring estimates use **2025 regular-season** records and stats, avoiding results from the season being simulated.
 
-Existing saved seasons remain intact. Click **Start from ESPN Week 7** to use the new official snapshot and real records; confirm replacement if you have simulated games. Custom Top 25 seeds start with 0–0 records.
+Source: https://www.espn.com/college-football/rankings/_/week/1/year/2026/seasontype/1
 
-## Model
+This is a checked-in snapshot, not an automatic live feed. The importer verifies the preseason-specific reference, season, zero records, and prior-season event dates. ESPN's general rankings API can ignore historical week parameters, so it is not used for the starting poll.
 
-The initial ESPN poll is reproduced exactly. Subsequent polls use deterministic simulated voters, each awarding 25–1 points. The number of voters comes from the source's first-place vote total (70 in this snapshot, maximum 1,750 points). Custom seasons use 63 voters.
+This version starts a fresh preseason under browser storage key `saturday-season-v2`. Previous version data remains in `saturday-season-v1` without being overwritten.
 
-Current performance strength uses win percentage, scoring margin capped at 28, completed FBS-opponent win percentage, and prior regular-season win percentage. Historical strength uses 2025 regular-season win percentage. These transparent heuristics are not ESPN FPI or an AP prediction model. AP rank establishes the starting rating of ranked teams; performance strength sets the unranked baseline. Unexpected losses, weaker current/historical opponents, opponent quality, home advantage, and capped margins drive updates. Idle teams retain ratings.
+## Game entry and settings
 
-Simulated scores use each team's real points scored and its opponent's real points allowed, plus rating differences and randomness. Matchups are fictional, not the real schedule. Records retain real starting wins/losses and add simulated outcomes. Stats cards continue to show the source snapshot, not simulated season totals.
+**Update poll after each game** is on by default. Adding or removing a result recalculates the current week's rankings and records immediately. All results use the same start-of-week baseline, so adding another game does not count earlier games twice or advance the week. A team may play once per week.
 
-## Refresh data and publish
+Turn automatic updates off to queue results and use **Update poll** when ready. Turning it off keeps the last displayed poll; turning it back on applies all queued results. **Next week** applies the whole slate and advances once. Results, the displayed slate, and the setting survive refreshes.
 
-With HTTPS access to `site.api.espn.com` and `a.espncdn.com`:
+## Ranking model
+
+The initial poll reproduces ESPN's reported rankings and points. Subsequent polls use deterministic simulated voters, each awarding 25–1 points. The voter count is the source's first-place vote total (69 in this snapshot); custom seeds use 63. Voter preferences differ more around the Top 25 cutoff. This awards actual ballot points to additional teams without inventing votes or violating the total available points.
+
+Preseason rank establishes ranked-team ratings. Others receiving votes and prior-season performance establish the rest of the field. Losses account for opponent rating, expected outcome, home advantage, and prior performance. Blowout penalties increase above a 10-point margin, become substantial at 21+, and cap at roughly 48 points. Losses to unranked teams carry a larger blowout penalty than losses to ranked teams. A top team can fall out of the Top 25 after an unranked blowout. Idle teams keep their ratings but may move as other teams change.
+
+This is an original transparent simulation model, not ESPN FPI or an official AP prediction model. Simulated scores use 2025 points scored and allowed plus ratings and randomness. Matchups are fictional. Team cards show the 2025 source stats; records count simulated games.
+
+## Refresh and publish
+
+With HTTPS access to `www.espn.com`, `site.api.espn.com`, and `a.espncdn.com`:
 
 ```sh
-python3 scripts/update-espn.py
+python3 scripts/update-preseason.py --season 2026
 python3 scripts/update-logos.py
 npm test
 npm run prepare-pages
 ```
 
-The updater validates seasons and completeness before replacing the snapshot. Logos are cached locally for all 138 teams, so the deployed site does not need ESPN access to display them. Google Fonts has system fallbacks.
+`python3 scripts/update-espn.py` is a compatible alias for the preseason refresh. Logos are cached locally for all 138 teams; Google Fonts has system fallbacks.
 
-GitHub Pages publishes the committed root `index.html`, `assets/`, and `logos/` from `main`. Commit and push source and regenerated output after an authorized update. The Check simulator workflow runs tests and a build. No backend or credentials are required by the app; saved seasons remain in the user's browser.
+GitHub Pages publishes committed `index.html`, `assets/`, and `logos/` from the root of `main`. Commit and push source and regenerated output after an authorized update. The Check simulator workflow runs tests and builds. The app requires no backend or credentials.

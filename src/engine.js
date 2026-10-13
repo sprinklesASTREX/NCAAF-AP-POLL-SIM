@@ -1,39 +1,128 @@
-import {teams,preseason,espnSnapshot,currentSeed} from './data.js';
-export function createSeason(seed=preseason,week=0){
- if(seed.length!==25||new Set(seed).size!==25||seed.some(n=>!teams.some(t=>t.id===n)))throw Error('Choose 25 different teams.');
- return {week,initialWeek:week,seed:[...seed],results:[],history:[],ratings:Object.fromEntries(teams.map(t=>[t.id,seed.includes(t.id)?96-seed.indexOf(t.id)*.95:Math.min(71,t.strength*.98)])),records:Object.fromEntries(teams.map(t=>[t.id,{w:0,l:0}]))};
+import { teams, preseason, espnSnapshot, currentSeed } from './data.js';
+
+const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
+
+function initialRatings(seed) {
+  return Object.fromEntries(teams.map(team => {
+    const rank = seed.indexOf(team.id);
+    const fringe = espnSnapshot.others.findIndex(t => t.id === team.id);
+    // Keep the voting bubble competitive, using preseason votes and prior-season performance.
+    const unranked = fringe >= 0 ? 72.6 - fringe * .42 : 48 + team.performanceStrength * .23;
+    return [team.id, rank >= 0 ? 96 - rank * .95 : Math.min(72.6, unranked)];
+  }));
 }
+
+export function createSeason(seed = preseason, week = 0) {
+  if (seed.length !== 25 || new Set(seed).size !== 25 || seed.some(id => !teams.some(t => t.id === id))) {
+    throw Error('Choose 25 different teams.');
+  }
+  return {
+    week, initialWeek: week, seed: [...seed], results: [], history: [],
+    ratings: initialRatings(seed),
+    records: Object.fromEntries(teams.map(t => [t.id, { w: 0, l: 0 }]))
+  };
+}
+
 export function createEspnSeason() {
- const state=createSeason(currentSeed,espnSnapshot.week);
- state.source='espn';state.voters=espnSnapshot.voters||63;state.snapshotDate=espnSnapshot.pollDate;
- state.records=Object.fromEntries(teams.map(t=>[t.id,{w:t.stats.w,l:t.stats.l}]));
- state.ratings=Object.fromEntries(teams.map(t=>{
-   const rank=currentSeed.indexOf(t.id);const other=espnSnapshot.others.find(x=>x.id===t.id);
-   return [t.id,rank>=0?96-rank*.95:Math.min(72.5,55+(t.performanceStrength-50)*.4+(other?3:0))];
- }));
- return state;
+  const state = createSeason(currentSeed, 0);
+  return { ...state, source: 'espn', voters: espnSnapshot.voters || 63, snapshotDate: espnSnapshot.pollDate };
 }
-export function poll(state){
- if(state.source==='espn'&&state.results.length===0) {
-  const values=[...espnSnapshot.poll,...espnSnapshot.others];
-  return teams.map(t=>{const p=values.find(x=>x.id===t.id);return {...t,points:p?.points||0,first:p?.first||0,rating:state.ratings[t.id],...state.records[t.id],rank:p?.rank||999};}).sort((a,b)=>(a.rank===999)-(b.rank===999)||a.rank-b.rank||b.points-a.points||b.rating-a.rating).map((t,i)=>({...t,rank:i+1}));
- }
- const ballots=Array.from({length:state.voters||63},(_,v)=>teams.map(t=>({id:t.id,score:state.ratings[t.id]+Math.sin((v+1)*(teams.indexOf(t)+11)*1.618)*.4})).sort((a,b)=>b.score-a.score).slice(0,25));
- const pts=Object.fromEntries(teams.map(t=>[t.id,0]));const first={};ballots.forEach(b=>b.forEach((t,i)=>{pts[t.id]+=25-i;if(i===0)first[t.id]=(first[t.id]||0)+1;}));
- return teams.map(t=>({...t,points:pts[t.id],first:first[t.id]||0,rating:state.ratings[t.id],...state.records[t.id]})).sort((a,b)=>b.points-a.points||b.rating-a.rating||a.name.localeCompare(b.name)).map((t,i)=>({...t,rank:i+1}));
+
+export function poll(state) {
+  if (state.source === 'espn' && state.results.length === 0) {
+    const values = [...espnSnapshot.poll, ...espnSnapshot.others];
+    return teams.map(team => {
+      const entry = values.find(t => t.id === team.id);
+      return { ...team, points: entry?.points || 0, first: entry?.first || 0,
+        rating: state.ratings[team.id], ...state.records[team.id], rank: entry?.rank || 999 };
+    }).sort((a, b) => a.rank - b.rank || b.points - a.points || b.rating - a.rating)
+      .map((team, i) => ({ ...team, rank: team.rank === 999 ? i + 1 : team.rank }));
+  }
+  const points = Object.fromEntries(teams.map(t => [t.id, 0]));
+  const first = {};
+  for (let voter = 0; voter < (state.voters || 63); voter++) {
+    const ballot = teams.map((team, i) => {
+      const rating = state.ratings[team.id];
+      // Voters agree more about elite teams and differ more near the Top 25 cutoff.
+      const spread = clamp(3 + (90 - rating) * .2, 2.5, 7);
+      const preference = Math.sin((voter + 1) * (i + 11) * 1.618) * spread;
+      return { id: team.id, score: rating + preference };
+    }).sort((a, b) => b.score - a.score).slice(0, 25);
+    ballot.forEach((team, i) => {
+      points[team.id] += 25 - i;
+      if (i === 0) first[team.id] = (first[team.id] || 0) + 1;
+    });
+  }
+  return teams.map(t => ({ ...t, points: points[t.id], first: first[t.id] || 0,
+    rating: state.ratings[t.id], ...state.records[t.id] }))
+    .sort((a, b) => b.points - a.points || b.rating - a.rating || a.name.localeCompare(b.name))
+    .map((t, i) => ({ ...t, rank: i + 1 }));
 }
-export function advance(state,games){
- const seen=new Set();for(const g of games){if(g.home===g.away||!teams.some(t=>t.id===g.home)||!teams.some(t=>t.id===g.away))throw Error('Each game needs two different roster teams.');if(seen.has(g.home)||seen.has(g.away))throw Error('A team can play only once per week.');seen.add(g.home);seen.add(g.away);if(!Number.isInteger(g.hs)||!Number.isInteger(g.as)||g.hs<0||g.as<0||g.hs>200||g.as>200||g.hs===g.as)throw Error('Use final scores from 0–200, with no ties.');}
- if(!games.length)throw Error('Add results or simulate this week first.');
- const next=structuredClone(state),before=poll(state),notes=[];
- for(const g of games){const winner=g.hs>g.as?g.home:g.away,loser=winner===g.home?g.away:g.home;const wr=state.ratings[winner],lr=state.ratings[loser];const winnerTeam=teams.find(t=>t.id===winner);const strengthW=winnerTeam.strength;
- const expected=1/(1+Math.exp((lr-wr+(winner===g.home?-2.5:2.5))/9));
- const margin=Math.min(Math.abs(g.hs-g.as),28)/28; const quality=Math.max(0,(lr-60)/35);const upset=1-expected;const badLoss=Math.max(0,(60-strengthW)/25)*.5+Math.max(0,(55-winnerTeam.performanceStrength)/25)*.5;const gain=1.5+upset*8+quality*2+margin;const drop=2+upset*8+badLoss*2+margin*1.5;
- next.ratings[winner]=Math.min(110,wr+gain);next.ratings[loser]=Math.max(5,lr-drop);next.records[winner].w++;next.records[loser].l++;
- notes.push({...g,winner,loser,gain,drop,upset:expected<.35,explanation:expected<.35?`Upset: ${winner} beat a stronger opponent. ${loser} loses ${drop.toFixed(1)} rating points${badLoss>0?' with an extra penalty for a loss to a historically weaker team':''}.`:`${winner} gains ${gain.toFixed(1)} rating points for opponent quality and margin; ${loser} loses ${drop.toFixed(1)}.`});}
- next.history.push({week:state.week,poll:before});next.week++;next.results.push({week:next.week,games:notes});return next;
+
+export function advance(state, games) {
+  const seen = new Set();
+  for (const game of games) {
+    if (game.home === game.away || !teams.some(t => t.id === game.home) || !teams.some(t => t.id === game.away)) {
+      throw Error('Each game needs two different roster teams.');
+    }
+    if (seen.has(game.home) || seen.has(game.away)) throw Error('A team can play only once per week.');
+    seen.add(game.home); seen.add(game.away);
+    if (![game.hs, game.as].every(score => Number.isInteger(score) && score >= 0 && score <= 200) || game.hs === game.as) {
+      throw Error('Use final scores from 0–200, with no ties.');
+    }
+  }
+  if (!games.length) throw Error('Add results or simulate this week first.');
+  const next = structuredClone(state);
+  const before = poll(state);
+  const notes = [];
+  for (const game of games) {
+    const winner = game.hs > game.as ? game.home : game.away;
+    const loser = winner === game.home ? game.away : game.home;
+    const winnerRating = state.ratings[winner], loserRating = state.ratings[loser];
+    const winnerTeam = teams.find(t => t.id === winner);
+    const unrankedWinner = before.find(t => t.id === winner).rank > 25;
+    const expected = 1 / (1 + Math.exp((loserRating - winnerRating + (winner === game.home ? -2.5 : 2.5)) / 9));
+    const margin = Math.abs(game.hs - game.as);
+    const blowout = clamp((margin - 10) / 25, 0, 1.5);
+    const quality = clamp((loserRating - 60) / 35, 0, 1.5);
+    const badLoss = Math.max(0, (60 - winnerTeam.strength) / 25) * .5 + Math.max(0, (55 - winnerTeam.performanceStrength) / 25) * .5;
+    const gain = 1.5 + (1 - expected) * 7 + quality * 2 + Math.min(margin, 35) / 35;
+    // A big loss is costly even against a ranked opponent. Unranked blowouts are harsher.
+    const blowoutPenalty = blowout * (unrankedWinner ? 18 : 12);
+    const drop = 2 + (1 - expected) * 7 + badLoss * 2 + blowoutPenalty;
+    next.ratings[winner] = Math.min(150, winnerRating + gain);
+    next.ratings[loser] = Math.max(5, loserRating - drop);
+    next.records[winner].w++; next.records[loser].l++;
+    const reason = margin >= 21 ? `${margin}-point blowout loss to ${unrankedWinner ? 'an unranked' : 'a ranked'} opponent` : expected < .35 ? 'upset loss' : 'loss';
+    notes.push({ ...game, winner, loser, gain, drop, margin, blowout: margin >= 21,
+      upset: expected < .35,
+      explanation: `${loser} loses ${drop.toFixed(1)} rating points after a ${reason}. ${winner} gains ${gain.toFixed(1)} for opponent quality and the result.` });
+  }
+  next.history.push({ week: state.week, poll: before });
+  next.week++;
+  next.results.push({ week: next.week, games: notes });
+  return next;
 }
-export function simulate(state,excluded=[]){
- const pool=teams.filter(t=>!excluded.includes(t.id));for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
- const games=[];for(let i=0;i+1<pool.length;i+=2){const h=pool[i],a=pool[i+1];const homeBase=state.source==='espn'?(h.stats.ppg+a.stats.allowed)/2:24;const awayBase=state.source==='espn'?(a.stats.ppg+h.stats.allowed)/2:22;const hs=Math.max(0,Math.round(homeBase+2+(state.ratings[h.id]-state.ratings[a.id])*.2+(Math.random()-.5)*28));let as=Math.max(0,Math.round(awayBase+(state.ratings[a.id]-state.ratings[h.id])*.2+(Math.random()-.5)*28));if(hs===as)as+=3;games.push({home:h.id,away:a.id,hs,as});}return games;
+
+// Recompute from the start-of-week state, so editing a result never counts it twice.
+export function workingSeason(state, games, autoUpdate = true) {
+  return autoUpdate && games.length ? advance(state, games) : state;
+}
+
+export function simulate(state, excluded = [], random = Math.random) {
+  const pool = teams.filter(t => !excluded.includes(t.id));
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  const games = [];
+  for (let i = 0; i + 1 < pool.length; i += 2) {
+    const home = pool[i], away = pool[i + 1];
+    const homeBase = (home.stats.ppg + away.stats.allowed) / 2;
+    const awayBase = (away.stats.ppg + home.stats.allowed) / 2;
+    const hs = Math.max(0, Math.round(homeBase + 2 + (state.ratings[home.id] - state.ratings[away.id]) * .2 + (random() - .5) * 28));
+    let as = Math.max(0, Math.round(awayBase + (state.ratings[away.id] - state.ratings[home.id]) * .2 + (random() - .5) * 28));
+    if (hs === as) as += 3;
+    games.push({ home: home.id, away: away.id, hs, as });
+  }
+  return games;
 }

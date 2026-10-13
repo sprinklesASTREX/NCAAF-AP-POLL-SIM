@@ -14,7 +14,7 @@ MAC: 'Akron:2006|Ball State:2050|Bowling Green:189|Buffalo:2084|Central Michigan
 'Sun Belt': 'App State:2026|Arkansas State:2032|Coastal Carolina:324|Georgia Southern:290|Georgia State:2247|James Madison:256|Louisiana:309|Louisiana Monroe:2433|Marshall:276|Old Dominion:295|South Alabama:6|Southern Miss:2572|Troy:2653',
 Independent: 'Notre Dame:87|UConn:41'
 };
-export const preseason = ['Texas','Penn State','Ohio State','Clemson','Georgia','Notre Dame','Oregon','Alabama','LSU','Miami','Arizona State','Illinois','South Carolina','Michigan','Florida','SMU','Kansas State','Oklahoma','Texas A&M','Indiana','Ole Miss','Iowa State','Texas Tech','Tennessee','Boise State'];
+export const preseason = snapshot.poll.map(t=>t.id);
 const strong = ['USC','Utah','Louisville','Auburn','Missouri','Iowa','Washington','Nebraska','Baylor','TCU','Tulane','Georgia Tech','Duke','Florida State','Oklahoma State','Wisconsin','Michigan State','Arkansas','Memphis','UNLV','Vanderbilt','Pittsburgh'];
 export const teams = Object.entries(groups).flatMap(([conference,list])=>list.split('|').map(pair=>{const [name,espn]=pair.split(':');const rank=preseason.indexOf(name); const tier=strong.indexOf(name);return {id:name,name,conference,espn: name==='Oregon'?'248':name==='Houston'?'248':espn, strength:rank>=0?94-rank*.87:tier>=0?72-tier*.38:conference==='SEC'||conference==='Big Ten'||conference==='Big 12'||conference==='ACC'?61:48};}));
 // Houston uses ESPN 248; Oregon uses 2483.
