@@ -1,5 +1,7 @@
 import { teams, preseason, espnSnapshot, currentSeed } from './data.js';
 
+export const MODEL_VERSION = 3;
+
 const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
 
 function initialRatings(seed) {
@@ -17,7 +19,7 @@ export function createSeason(seed = preseason, week = 0) {
     throw Error('Choose 25 different teams.');
   }
   return {
-    week, initialWeek: week, seed: [...seed], results: [], history: [],
+    modelVersion: MODEL_VERSION, week, initialWeek: week, seed: [...seed], results: [], history: [],
     ratings: initialRatings(seed),
     records: Object.fromEntries(teams.map(t => [t.id, { w: 0, l: 0 }]))
   };
@@ -84,9 +86,16 @@ export function advance(state, games) {
     const expected = 1 / (1 + Math.exp((loserRating - winnerRating + (winner === game.home ? -2.5 : 2.5)) / 9));
     const margin = Math.abs(game.hs - game.as);
     const blowout = clamp((margin - 10) / 25, 0, 1.5);
-    const quality = clamp((loserRating - 60) / 35, 0, 1.5);
+    const loserRank = before.find(t => t.id === loser).rank;
+    const quality = clamp((loserRating - 62) / 30, 0, 1.25);
     const badLoss = Math.max(0, (60 - winnerTeam.strength) / 25) * .5 + Math.max(0, (55 - winnerTeam.performanceStrength) / 25) * .5;
-    const gain = 1.5 + (1 - expected) * 7 + quality * 2 + Math.min(margin, 35) / 35;
+    // Opponent quality drives credit. A close elite win matters far more than a weak blowout.
+    const rankedBonus = loserRank <= 10 ? 3.5 : loserRank <= 25 ? 1.5 : 0;
+    let gain = quality * (1.5 + (1 - expected) * 9) + rankedBonus + (1 - expected) * .4
+      + Math.min(margin, 28) / 28 * quality * .8;
+    // Routine wins cannot steadily inflate a strong team's rating into the Top 25.
+    // This applies to every conference; there is no win-count or conference shortcut.
+    if (loserRank > 25) gain *= clamp((loserRating + 12 - winnerRating) / 12, 0, 1);
     // A big loss is costly even against a ranked opponent. Unranked blowouts are harsher.
     const blowoutPenalty = blowout * (unrankedWinner ? 18 : 12);
     const drop = 2 + (1 - expected) * 7 + badLoss * 2 + blowoutPenalty;
@@ -95,12 +104,23 @@ export function advance(state, games) {
     next.records[winner].w++; next.records[loser].l++;
     const reason = margin >= 21 ? `${margin}-point blowout loss to ${unrankedWinner ? 'an unranked' : 'a ranked'} opponent` : expected < .35 ? 'upset loss' : 'loss';
     notes.push({ ...game, winner, loser, gain, drop, margin, blowout: margin >= 21,
-      upset: expected < .35,
-      explanation: `${loser} loses ${drop.toFixed(1)} rating points after a ${reason}. ${winner} gains ${gain.toFixed(1)} for opponent quality and the result.` });
+      opponentRank: loserRank, opponentRating: loserRating, upset: expected < .35,
+      explanation: `${winner}: +${gain.toFixed(1)} rating (${loserRank <= 25 ? '#' + loserRank : 'unranked'} opponent). ${loser}: −${drop.toFixed(1)} (${reason}).` });
   }
   next.history.push({ week: state.week, poll: before });
   next.week++;
   next.results.push({ week: next.week, games: notes });
+  return next;
+}
+
+// Re-score saved results without discarding the user's season or changing any score.
+export function upgradeSeason(saved) {
+  if (saved.modelVersion === MODEL_VERSION) return saved;
+  let next = saved.source === 'espn' ? createEspnSeason() : createSeason(saved.seed, saved.initialWeek || 0);
+  if (saved.customSeed) next.customSeed = true;
+  for (const week of saved.results) {
+    next = advance(next, week.games.map(({ home, away, hs, as }) => ({ home, away, hs, as })));
+  }
   return next;
 }
 

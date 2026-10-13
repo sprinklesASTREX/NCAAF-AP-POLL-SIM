@@ -57,3 +57,39 @@ test('preseason statistics cannot contain results from the simulated year',async
  assert.ok(Object.values(createEspnSeason().records).every(r=>r.w===0&&r.l===0));
  assert.equal(poll(createEspnSeason()).filter(t=>t.rank===14).length,2);
 });
+
+test('two narrow top-ten wins lift Northwestern substantially',()=>{
+ const seed=preseason.filter(t=>t!=='Penn State');seed.splice(6,0,'Penn State');
+ let s=createSeason(seed);const initial=poll(s).find(t=>t.id==='Northwestern');
+ assert.equal(poll(s).find(t=>t.id==='Oregon').rank,2);
+ s=advance(s,[{home:'Northwestern',away:'Oregon',hs:21,as:20}]);
+ assert.equal(s.results[0].games[0].opponentRank,2);
+ assert.equal(poll(s).find(t=>t.id==='Penn State').rank,6);
+ s=advance(s,[{home:'Penn State',away:'Northwestern',hs:20,as:22}]);
+ const result=poll(s).find(t=>t.id==='Northwestern');
+ assert.ok(result.rank<=12);assert.ok(result.points-initial.points>=700);assert.equal(result.w,2);
+});
+
+test('five weak-opponent blowouts are not an automatic Top 25 ticket',async()=>{
+ const {createEspnSeason}=await import('../src/engine.js');
+ for(const name of ['Boise State','Navy','Memphis','Liberty','Tulane']){
+  let s=createEspnSeason();
+  for(const opponent of ['Akron','Kent State','UMass','Ball State','Louisiana Monroe'])s=advance(s,[{home:name,away:opponent,hs:49,as:7}]);
+  const team=poll(s).find(t=>t.id===name);assert.equal(team.w,5);assert.ok(team.rank>25,`${name} must earn quality wins`);
+ }
+});
+
+test('same-strength teams receive the same elite-win credit across conferences',()=>{
+ const a=createSeason(),b=createSeason();a.ratings.Northwestern=60;b.ratings.Liberty=60;
+ const power=advance(a,[{home:'Northwestern',away:'Oregon',hs:21,as:20}]);
+ const other=advance(b,[{home:'Liberty',away:'Oregon',hs:21,as:20}]);
+ assert.equal(power.results[0].games[0].gain,other.results[0].games[0].gain);
+});
+
+test('model upgrade replays saved games without changing scores or records',async()=>{
+ const {createEspnSeason,upgradeSeason,MODEL_VERSION}=await import('../src/engine.js');
+ let s=createEspnSeason();s=advance(s,[{home:'Northwestern',away:'Oregon',hs:21,as:20}]);s=advance(s,[{home:'Penn State',away:'Northwestern',hs:20,as:22}]);
+ const legacy=structuredClone(s);delete legacy.modelVersion;legacy.ratings.Northwestern=61;legacy.results[0].games[0].gain=0;
+ const fixed=upgradeSeason(legacy);assert.equal(fixed.modelVersion,MODEL_VERSION);assert.deepEqual(fixed,s);assert.deepEqual(fixed.records,legacy.records);assert.equal(fixed.week,legacy.week);
+ assert.strictEqual(upgradeSeason(fixed),fixed);assert.equal(legacy.ratings.Northwestern,61);
+});

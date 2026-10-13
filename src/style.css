@@ -3,3 +3,25 @@
 .team-stats{font-size:9px;line-height:1.8;color:#768c64;margin:0}.reset{display:block;margin-bottom:12px}
 .source-link{font-size:9px;color:#5c7949;text-decoration:none;white-space:nowrap}.seed-notice .source-link{margin-left:auto}.seed-notice button{margin-left:0}
 .settings-panel{padding:13px 0 17px;border-top:1px solid #49664e;border-bottom:1px solid #49664e;margin:0 0 22px}.settings-panel summary{font-size:11px;cursor:pointer;color:#d5e7bc}.toggle-setting{display:flex;align-items:center;gap:9px;letter-spacing:0;font-size:11px;color:#eef5df;margin:15px 0 8px;cursor:pointer}.toggle-setting input{width:17px;height:17px;accent-color:#d8f080;flex-shrink:0}.settings-panel p{font-size:10px;line-height:1.7;color:#b3c6a6;margin:0}
+/* Compact page heading and optional dark palette. */
+h1{font-size:clamp(30px,4vw,48px);letter-spacing:-1.8px}.hero{margin:18px 0 24px}.hero p{margin-top:12px}.model-note{padding:18px 7px}.model-note>span{display:none}
+:root[data-theme="dark"]{color-scheme:dark;background:#101713;color:#e6eee4}
+[data-theme="dark"] header,[data-theme="dark"] nav,[data-theme="dark"] footer{border-color:#344539}
+[data-theme="dark"] .brand,[data-theme="dark"] h1,[data-theme="dark"] h2,[data-theme="dark"] h3,[data-theme="dark"] .statteam,[data-theme="dark"] .teamcell strong,[data-theme="dark"] .points,[data-theme="dark"] .text-btn{color:#e6eee4}
+[data-theme="dark"] .brandmark{background:#d8f080;color:#173f32}[data-theme="dark"] .brandmark span{color:#173f32}
+[data-theme="dark"] .primary,[data-theme="dark"] .stats,[data-theme="dark"] .modal{background:#17231d;border-color:#35483a}
+[data-theme="dark"] .stats>div{border-color:#35483a}
+[data-theme="dark"] .weekcard,[data-theme="dark"] .seed-notice,[data-theme="dark"] thead,[data-theme="dark"] .dropped,[data-theme="dark"] tbody tr:first-child,[data-theme="dark"] .week-results h3{background:#203226;border-color:#3b503d}
+[data-theme="dark"] td,[data-theme="dark"] .receiving,[data-theme="dark"] .result{border-color:#304234}
+[data-theme="dark"] td,[data-theme="dark"] .hero p,[data-theme="dark"] .weekcard div,[data-theme="dark"] .section-head p,[data-theme="dark"] .receiving p,[data-theme="dark"] .model-note p,[data-theme="dark"] .modal p,[data-theme="dark"] .result p,[data-theme="dark"] .empty p{color:#bdcbb7}
+[data-theme="dark"] .eyebrow,[data-theme="dark"] .header-note,[data-theme="dark"] .nav-meta,[data-theme="dark"] th,[data-theme="dark"] .stats>div>span,[data-theme="dark"] .stats small,[data-theme="dark"] .teamcell small,[data-theme="dark"] .seed-notice,[data-theme="dark"] .team-stats,[data-theme="dark"] .team-grid article small,[data-theme="dark"] .reset,[data-theme="dark"] footer{color:#a7bc9c}
+[data-theme="dark"] .rank,[data-theme="dark"] tbody tr:first-child .rank,[data-theme="dark"] .receiving b,[data-theme="dark"] .source-link,[data-theme="dark"] .seed-notice button,[data-theme="dark"] .model-note button,[data-theme="dark"] .team-grid article div,[data-theme="dark"] .brand-footer,[data-theme="dark"] .result b{color:#c1de99}
+[data-theme="dark"] nav button{color:#a7bc9c}[data-theme="dark"] nav button.active{color:#d8f080}[data-theme="dark"] nav button.active:after{background:#d8f080}
+[data-theme="dark"] nav button span,[data-theme="dark"] .first{background:#2b412e;color:#cce8a8;border-color:#4b6443}
+[data-theme="dark"] .tag,[data-theme="dark"] .team-grid article{border-color:#3c513d;color:#c5dcad}
+[data-theme="dark"] .filters input,[data-theme="dark"] .filters select,[data-theme="dark"] .modal textarea{background:#243829;color:#edf5e5;border-color:#4b6145}
+[data-theme="dark"] .filters input::placeholder{color:#b0c0a3}
+[data-theme="dark"] .crest{background:#eef3e8;border-radius:5px;padding:3px}
+[data-theme="dark"] .up{color:#c2e883}[data-theme="dark"] .down{color:#efa992}[data-theme="dark"] .same{color:#a2b299}
+[data-theme="dark"] .upset{background:#543e28;color:#ffcf98}[data-theme="dark"] .close{color:#c5dfaa}
+.header-actions{display:flex;align-items:center;gap:18px}.header-actions button{white-space:nowrap}
