@@ -1,30 +1,45 @@
 # Saturday — College Football Poll Simulator
 
-A responsive, browser-based 138-team college football poll simulator. Includes a Top 25, first-place votes, others receiving votes, dropped teams, game entry, random weekly slates, results history, and local saved seasons.
+Live: https://sprinklesastrex.github.io/NCAAF-AP-POLL-SIM/
 
-## Run
+138 teams, a Top 25, first-place votes, others receiving votes, recently dropped teams, real starting records, manual results, fictional weekly slates, and browser-saved seasons.
 
-Requires Node.js 20.19+ or 22.12+.
+## Run and validate
+
+Requires Node.js 22.12+.
 
 ```sh
 npm ci --cache /tmp/ncaaf-npm
 npm run dev
 ```
 
-`npm test` checks the ranking model; `npm run build` builds the production app.
+Open `/app.html` on the development server. `npm test` checks model behavior and exact ESPN snapshot preservation. `npm run build` builds the production app.
 
-## Starting data
+## ESPN snapshot
 
-Defaults to a Week 7 sandbox using the 2025 preseason Top 25 order as a reference. **This is not the official 2026 Week 7 poll.** Use “Set Week 7 poll” to paste 25 roster names in order. Records count games entered after the seed, not historical season records. The 138-program field includes North Dakota State and Sacramento State. Conference assignments and historical strengths are reference data, not a live feed.
+The checked-in snapshot is the **2026 Week 7 AP poll** returned by ESPN, published October 11, 2026 and fetched October 13, 2026. It includes ESPN's exact Top 25 points, first-place votes, others receiving votes, and dropped teams. All 138 teams have season wins/losses, points scored/allowed per game, passing/rushing yards per game, 2025 regular-season records, and completed-opponent win percentages. This is a dated snapshot, not an automatically updating feed. Links to ESPN rankings and team statistics are in the app.
 
-## Ranking model
+Existing saved seasons remain intact. Click **Start from ESPN Week 7** to use the new official snapshot and real records; confirm replacement if you have simulated games. Custom Top 25 seeds start with 0–0 records.
 
-63 deterministic voter ballots distribute 25–1 points; maximum 1,575 points per team. Small voter preferences can change the seed order. Ratings adjust for expected outcomes, opponent strength, home advantage, capped margins (28 points), and historically weak opponents. Historical strength is a heuristic, not a trained model or verified current statistics. Random weekly matchups are fictional, not the official schedule. A team may play once per week; idle teams retain ratings.
+## Model
 
-Team logos load from ESPN's CDN (`a.espncdn.com`); initials appear when blocked or unavailable. Fonts use Google Fonts with system fallbacks. No credentials or backend required. Season data is stored only in this browser. Resetting or clearing browser storage removes it.
+The initial ESPN poll is reproduced exactly. Subsequent polls use deterministic simulated voters, each awarding 25–1 points. The number of voters comes from the source's first-place vote total (70 in this snapshot, maximum 1,750 points). Custom seasons use 63 voters.
 
-## GitHub Pages
+Current performance strength uses win percentage, scoring margin capped at 28, completed FBS-opponent win percentage, and prior regular-season win percentage. Historical strength uses 2025 regular-season win percentage. These transparent heuristics are not ESPN FPI or an AP prediction model. AP rank establishes the starting rating of ranked teams; performance strength sets the unranked baseline. Unexpected losses, weaker current/historical opponents, opponent quality, home advantage, and capped margins drive updates. Idle teams retain ratings.
 
-Live site: https://sprinklesastrex.github.io/NCAAF-AP-POLL-SIM/
+Simulated scores use each team's real points scored and its opponent's real points allowed, plus rating differences and randomness. Matchups are fictional, not the real schedule. Records retain real starting wins/losses and add simulated outcomes. Stats cards continue to show the source snapshot, not simulated season totals.
 
-Pages publishes the compiled `index.html` and `assets/` from `main` at the repository root. The development HTML entry is `app.html`; open `/app.html` on the development server. Before publishing a source change, run `npm test` and `npm run prepare-pages`, then commit and push the regenerated `index.html` and `assets/` with the source. GitHub's existing Pages workflow publishes the site; the Check simulator workflow validates the source. Keeping the generated files in the repository avoids needing access to change Pages publishing settings.
+## Refresh data and publish
+
+With HTTPS access to `site.api.espn.com` and `a.espncdn.com`:
+
+```sh
+python3 scripts/update-espn.py
+python3 scripts/update-logos.py
+npm test
+npm run prepare-pages
+```
+
+The updater validates seasons and completeness before replacing the snapshot. Logos are cached locally for all 138 teams, so the deployed site does not need ESPN access to display them. Google Fonts has system fallbacks.
+
+GitHub Pages publishes the committed root `index.html`, `assets/`, and `logos/` from `main`. Commit and push source and regenerated output after an authorized update. The Check simulator workflow runs tests and a build. No backend or credentials are required by the app; saved seasons remain in the user's browser.

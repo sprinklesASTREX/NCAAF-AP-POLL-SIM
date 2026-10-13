@@ -8,3 +8,12 @@ test('a quality upset win earns more than beating a weak opponent',()=>{const s=
 test('reject invalid, duplicate, tied and unknown results without changing state',()=>{const s=createSeason();for(const g of [[{home:'Texas',away:'Texas',hs:20,as:10}],[{home:'Texas',away:'Akron',hs:20,as:20}],[{home:'Texas',away:'Akron',hs:-1,as:20}],[{home:'Unknown',away:'Akron',hs:21,as:20}],[{home:'Texas',away:'Akron',hs:21,as:20},{home:'Texas',away:'Georgia',hs:21,as:20}]])assert.throws(()=>advance(s,g));assert.equal(s.week,0);assert.throws(()=>advance(s,[]));});
 test('week simulation respects manually entered games and preserves history',()=>{const s=createSeason(preseason,7),manual={home:'Texas',away:'Akron',hs:20,as:24};const games=simulate(s,['Texas','Akron']);assert.equal(games.length,68);assert.ok(games.every(g=>g.home!=='Texas'&&g.away!=='Akron'&&g.hs!==g.as));const next=advance(s,[manual,...games]);assert.equal(next.week,8);assert.equal(next.history[0].week,7);assert.equal(next.results[0].games.length,69);assert.ok(Object.values(next.records).every(t=>t.w+t.l===1));});
 test('custom seed requires exactly 25 unique roster teams',()=>{assert.throws(()=>createSeason([]));assert.throws(()=>createSeason(Array(25).fill('Texas')));const seed=[...preseason].reverse();const s=createSeason(seed,7);assert.ok(s.ratings['Boise State']>s.ratings.Texas);});
+
+test('ESPN seed preserves official points, records, others, and real-data strength',async()=>{
+ const {createEspnSeason}=await import('../src/engine.js');const {espnSnapshot}=await import('../src/data.js');const s=createEspnSeason(),p=poll(s);
+ assert.equal(s.week,espnSnapshot.week);assert.equal(p[0].id,espnSnapshot.poll[0].id);
+ for(const row of espnSnapshot.poll){const team=p.find(t=>t.id===row.id);assert.equal(team.rank,row.rank);assert.equal(team.points,row.points);assert.equal(team.first,row.first);assert.equal(`${team.w}-${team.l}`,row.record);}
+ for(const row of espnSnapshot.others)assert.equal(p.find(t=>t.id===row.id).points,row.points);
+ assert.ok(teams.every(t=>Number.isFinite(t.performanceStrength)&&Number.isFinite(t.stats.ppg)&&Number.isFinite(t.stats.allowed)));
+ const next=advance(s,[{home:'Texas',away:'Akron',hs:20,as:24}]);assert.equal(next.records.Texas.l,s.records.Texas.l+1);assert.equal(next.records.Akron.w,s.records.Akron.w+1);assert.equal(poll(next).reduce((n,t)=>n+t.points,0),s.voters*325);assert.equal(poll(next).reduce((n,t)=>n+t.first,0),s.voters);
+});

@@ -1,3 +1,5 @@
+import snapshot from './espn-snapshot.json' with { type: 'json' };
+export const espnSnapshot = snapshot;
 // 2026 FBS field, including North Dakota State and Sacramento State.
 const groups = {
 ACC: 'Boston College:103|California:25|Clemson:228|Duke:150|Florida State:52|Georgia Tech:59|Louisville:97|Miami:2390|NC State:152|North Carolina:153|Pittsburgh:221|SMU:2567|Stanford:24|Syracuse:183|Virginia:258|Virginia Tech:259|Wake Forest:154',
@@ -17,4 +19,11 @@ const strong = ['USC','Utah','Louisville','Auburn','Missouri','Iowa','Washington
 export const teams = Object.entries(groups).flatMap(([conference,list])=>list.split('|').map(pair=>{const [name,espn]=pair.split(':');const rank=preseason.indexOf(name); const tier=strong.indexOf(name);return {id:name,name,conference,espn: name==='Oregon'?'248':name==='Houston'?'248':espn, strength:rank>=0?94-rank*.87:tier>=0?72-tier*.38:conference==='SEC'||conference==='Big Ten'||conference==='Big 12'||conference==='ACC'?61:48};}));
 // Houston uses ESPN 248; Oregon uses 2483.
 teams.find(t=>t.name==='Oregon').espn='2483';
-export const logo = t=>`https://a.espncdn.com/i/teamlogos/ncaa/500/${t.espn}.png`;
+for (const team of teams) {
+  const stats = snapshot.teams[team.id];
+  team.stats = stats;
+  team.strength = stats.historicalStrength;
+  team.performanceStrength = stats.performanceStrength;
+}
+export const logo = t=>`./logos/${t.espn}.png`;
+export const currentSeed = snapshot.poll.map(t=>t.id);
