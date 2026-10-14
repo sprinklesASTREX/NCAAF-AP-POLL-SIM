@@ -1,4 +1,4 @@
-# Saturday — College Football Poll Simulator
+# College Poll
 
 Live: https://sprinklesastrex.github.io/NCAAF-AP-POLL-SIM/
 
@@ -27,7 +27,7 @@ Seasons use browser storage key `saturday-season-v2`. Ranking model upgrades rep
 
 ## Layout and settings
 
-The main screen has only the poll, score entry, and Top 25 / Teams / Results tabs. On phones, score entry comes first. Settings contains the automatic-update toggle, dark mode, starting-poll editor, new-season button, and ranking rules. Additional team stats and result explanations are collapsed by default.
+The main screen has only the poll, score entry, and Top 25 / Teams / Playoff / Results tabs. On phones, score entry comes first. Settings contains the automatic-update toggle, dark mode, starting-poll editor, new-season button, and ranking rules. Additional team stats and result explanations are collapsed by default.
 
 ## Game entry
 
@@ -46,6 +46,18 @@ Wins are weighted by opponent rating and rank at the start of the week. Top-ten 
 Preseason rank establishes ranked-team ratings. Others receiving votes and prior-season performance establish the rest of the field. Losses account for opponent rating, expected outcome, home advantage, and prior performance. Blowout penalties increase above a 10-point margin, become substantial at 21+, and cap at roughly 48 points. Losses to unranked teams carry a larger blowout penalty than losses to ranked teams. A top team can fall out of the Top 25 after an unranked blowout. Idle teams keep their ratings but may move as other teams change.
 
 This is an original transparent simulation model, not ESPN FPI or an official AP prediction model. Simulated scores use 2025 points scored and allowed plus ratings and randomness. Matchups are fictional. Team cards show the 2025 source stats; records count simulated games.
+
+## Custom teams
+
+Open **Teams → Add team**. Set a name, conference, color, and starting strength from 25 to 99. Custom teams use a colored initials badge and a generated scoring profile; they are not assigned historical ESPN statistics. They appear in the poll, score dropdowns, weekly simulation, and playoff eligibility.
+
+Edit a custom team from its card. IDs stay stable, so name changes preserve records. New seasons retain custom teams and reset their records. An unused custom team can be removed; teams with recorded games or an active playoff seed are protected from removal. Custom teams are stored with the season in this browser.
+
+## Playoff
+
+Open **Playoff** to freeze the current Top 12 as seeds. Seeds 1–4 receive first-round byes. First-round matchups are 8–9, 5–12, 6–11, and 7–10, feeding seeds 1, 4, 3, and 2 respectively. The bracket uses fixed paths without reseeding or conference auto-bids.
+
+Pick a team to advance it, or enter both final scores and select **Save score**. **Simulate round** fills the next unfinished round; **Simulate rest** fills all remaining games while retaining results already entered. Changing an earlier winner clears affected later results. The bracket is saved separately from the regular-season poll and records. **Use current Top 12** reseeds the bracket; starting a new season clears it.
 
 ## Refresh and publish
 

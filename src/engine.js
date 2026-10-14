@@ -1,11 +1,13 @@
-import { teams, preseason, espnSnapshot, currentSeed } from './data.js';
+import {getTeams} from './custom-teams.js';
+import { preseason, espnSnapshot, currentSeed } from './data.js';
 
 export const MODEL_VERSION = 3;
 
 const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
 
-function initialRatings(seed) {
-  return Object.fromEntries(teams.map(team => {
+function initialRatings(seed, customTeams = []) {
+  return Object.fromEntries(getTeams({customTeams}).map(team => {
+    if(team.custom && !seed.includes(team.id))return [team.id, team.startingStrength];
     const rank = seed.indexOf(team.id);
     const fringe = espnSnapshot.others.findIndex(t => t.id === team.id);
     // Keep the voting bubble competitive, using preseason votes and prior-season performance.
@@ -14,24 +16,26 @@ function initialRatings(seed) {
   }));
 }
 
-export function createSeason(seed = preseason, week = 0) {
+export function createSeason(seed = preseason, week = 0, customTeams = []) {
+  const teams = getTeams({customTeams});
   if (seed.length !== 25 || new Set(seed).size !== 25 || seed.some(id => !teams.some(t => t.id === id))) {
     throw Error('Choose 25 different teams.');
   }
   return {
     modelVersion: MODEL_VERSION, week, initialWeek: week, seed: [...seed], results: [], history: [],
-    ratings: initialRatings(seed),
+    customTeams: structuredClone(customTeams), ratings: initialRatings(seed, customTeams),
     records: Object.fromEntries(teams.map(t => [t.id, { w: 0, l: 0 }]))
   };
 }
 
-export function createEspnSeason() {
-  const state = createSeason(currentSeed, 0);
+export function createEspnSeason(customTeams = []) {
+  const state = createSeason(currentSeed, 0, customTeams);
   return { ...state, source: 'espn', voters: espnSnapshot.voters || 63, snapshotDate: espnSnapshot.pollDate };
 }
 
 export function poll(state) {
-  if (state.source === 'espn' && state.results.length === 0) {
+  const teams = getTeams(state);
+  if (state.source === 'espn' && state.results.length === 0 && !state.customTeams?.length) {
     const values = [...espnSnapshot.poll, ...espnSnapshot.others];
     return teams.map(team => {
       const entry = values.find(t => t.id === team.id);
@@ -62,6 +66,7 @@ export function poll(state) {
 }
 
 export function advance(state, games) {
+  const teams = getTeams(state);
   const seen = new Set();
   for (const game of games) {
     if (game.home === game.away || !teams.some(t => t.id === game.home) || !teams.some(t => t.id === game.away)) {
@@ -105,7 +110,7 @@ export function advance(state, games) {
     const reason = margin >= 21 ? `${margin}-point blowout loss to ${unrankedWinner ? 'an unranked' : 'a ranked'} opponent` : expected < .35 ? 'upset loss' : 'loss';
     notes.push({ ...game, winner, loser, gain, drop, margin, blowout: margin >= 21,
       opponentRank: loserRank, opponentRating: loserRating, upset: expected < .35,
-      explanation: `${winner}: +${gain.toFixed(1)} rating (${loserRank <= 25 ? '#' + loserRank : 'unranked'} opponent). ${loser}: −${drop.toFixed(1)} (${reason}).` });
+      explanation: `${winnerTeam.name}: +${gain.toFixed(1)} rating (${loserRank <= 25 ? '#' + loserRank : 'unranked'} opponent). ${teams.find(t => t.id === loser).name}: −${drop.toFixed(1)} (${reason}).` });
   }
   next.history.push({ week: state.week, poll: before });
   next.week++;
@@ -116,7 +121,7 @@ export function advance(state, games) {
 // Re-score saved results without discarding the user's season or changing any score.
 export function upgradeSeason(saved) {
   if (saved.modelVersion === MODEL_VERSION) return saved;
-  let next = saved.source === 'espn' ? createEspnSeason() : createSeason(saved.seed, saved.initialWeek || 0);
+  let next = saved.source === 'espn' ? createEspnSeason(saved.customTeams || []) : createSeason(saved.seed, saved.initialWeek || 0, saved.customTeams || []);
   if (saved.customSeed) next.customSeed = true;
   for (const week of saved.results) {
     next = advance(next, week.games.map(({ home, away, hs, as }) => ({ home, away, hs, as })));
@@ -130,6 +135,7 @@ export function workingSeason(state, games, autoUpdate = true) {
 }
 
 export function simulate(state, excluded = [], random = Math.random) {
+  const teams = getTeams(state);
   const pool = teams.filter(t => !excluded.includes(t.id));
   for (let i = pool.length - 1; i > 0; i--) {
     const j = Math.floor(random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]];
