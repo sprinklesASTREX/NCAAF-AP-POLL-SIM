@@ -25,7 +25,11 @@ This is a checked-in snapshot, not an automatic live feed. The importer verifies
 
 Seasons use browser storage key `saturday-season-v2`. Ranking model upgrades replay saved results with the revised rules, preserving scores, records, and the week. The previous model state is backed up under `saturday-season-v2-before-v3`. The older v1 season is also left untouched.
 
-## Game entry and settings
+## Layout and settings
+
+The main screen has only the poll, score entry, and Top 25 / Teams / Results tabs. On phones, score entry comes first. Settings contains the automatic-update toggle, dark mode, starting-poll editor, new-season button, and ranking rules. Additional team stats and result explanations are collapsed by default.
+
+## Game entry
 
 **Update poll after each game** is on by default. Adding or removing a result recalculates the current week's rankings and records immediately. All results use the same start-of-week baseline, so adding another game does not count earlier games twice or advance the week. A team may play once per week.
 
